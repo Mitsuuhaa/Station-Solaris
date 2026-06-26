@@ -1641,17 +1641,33 @@ function saveModal(){
 var fields = collectFields(_ms);
 if(!fields.title && !fields.title_en){ showToast(_cl==='en'?'Title is required':'Le titre est requis'); return; }
 if(!fields.title) fields.title = fields.title_en;
+
+// Tag mod author if moderator is logged in
+var mod = getCurrentMod();
+if(mod){
+  var modItem = (getData()[_ms]||[]).find(function(x){ return x.id===_mi; });
+  if(modItem && modItem._authorId && modItem._authorId !== mod.id){
+    showToast('Vous ne pouvez modifier que vos propres posts'); return;
+  }
+  fields._author = mod.username;
+  fields._authorId = mod.id;
+}
+
+// Stamp creation date on new items
+if(!_mi) fields._createdAt = new Date().toISOString().split('T')[0];
+
 var data = getData();
 if(!data[_ms]) data[_ms] = [];
 if(_mi){
-var idx = data[_ms].findIndex(function(x){ return x.id===_mi; });
-if(idx > -1) data[_ms][idx] = Object.assign(data[_ms][idx], fields);
-showToast('Modifié ✓');
+  var idx = data[_ms].findIndex(function(x){ return x.id===_mi; });
+  if(idx > -1) data[_ms][idx] = Object.assign(data[_ms][idx], fields);
+  showToast('Modifié ✓');
 } else {
-data[_ms].push(Object.assign({ id: Date.now().toString() }, fields));
-showToast('Ajouté ✓');
+  data[_ms].push(Object.assign({ id: Date.now().toString() }, fields));
+  showToast('Ajouté ✓');
 }
 saveData(data);
+_md = false;
 closeModal();
 renderAdminSection(_ms);
 if(_cur === 'home-page') renderHome();
@@ -2651,11 +2667,6 @@ if(ed) ed.addEventListener('input', markModalDirty);
 });
 }
 
-var _origSaveModal = saveModal;
-saveModal = function(){
-_origSaveModal();
-_md = false;
-};
 
 function refreshStorageDisplay(){
 var kb  = getStorageUsage();
@@ -3015,37 +3026,6 @@ var firstItem = document.querySelector('.admin-sidebar-item[style=""]');
 if(firstItem) firstItem.click();
 }
 
-var _origSaveModal2 = saveModal;
-saveModal = function(){
-
-var mod = getCurrentMod();
-if(mod){
-var fields = collectFields(_ms);
-if(!fields.title && !fields.title_en){ showToast('Le titre est requis'); return; }
-if(!fields.title) fields.title = fields.title_en;
-fields._author = mod.username;
-fields._authorId = mod.id;
-var data = getData();
-if(!data[_ms]) data[_ms] = [];
-if(_mi){
-var idx2 = data[_ms].findIndex(function(x){ return x.id === _mi; });
-
-if(idx2 > -1 && data[_ms][idx2]._authorId && data[_ms][idx2]._authorId !== mod.id){
-showToast('Vous ne pouvez modifier que vos propres posts'); return;
-}
-if(idx2 > -1) data[_ms][idx2] = Object.assign(data[_ms][idx2], fields);
-} else {
-data[_ms].push(Object.assign({ id: Date.now().toString(), _createdAt: new Date().toISOString().split('T')[0] }, fields));
-}
-saveData(data);
-_md = false;
-document.getElementById('addModal').classList.remove('open');
-renderAdminSection(_ms);
-showToast('Enregistré ✓');
-return;
-}
-_origSaveModal2();
-};
 
 var _origDeleteItem = deleteItem;
 deleteItem = function(sec, id){
